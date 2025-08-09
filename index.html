@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>液态玻璃时钟 - 新标签页</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 重置和基础样式 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            caret-color: transparent;
+        }
+
+        /* 页面基础样式 */
+        body {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: url("https://static1.e926.net/data/2b/c3/2bc3fe99c64c339b148df23992bdc64f.jpg") no-repeat center center;
+            background-size: cover;
+            position: relative;
+        }
+
+        /* 液态玻璃背景层 */
+        .glass-layer {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(7px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            z-index: 0;
+        }
+
+        /* 动态光影效果 */
+        .light-effect {
+            position: fixed;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(
+                circle at 50% 50%,
+                rgba(255, 255, 255, 0.3) 0%,
+                rgba(255, 255, 255, 0) 60%
+            );
+            animation: moveLight 15s infinite alternate ease-in-out;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes moveLight {
+            0% {
+                transform: translate(-25%, -25%);
+            }
+            100% {
+                transform: translate(25%, 25%);
+            }
+        }
+
+        /* 文本选择样式 */
+        ::selection {
+            color: white;
+            background-color: black;
+        }
+
+        /* 时间显示容器 */
+        .showTime {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            inset: 0;
+            font-size: clamp(1.5rem, 5vw, 3rem);
+            text-align: center;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 2;
+        }
+
+        /* 时间样式 */
+        .time {
+            font-size: 2em;
+            font-weight: 300;
+            margin-bottom: 0.25em;
+            position: relative;
+            mix-blend-mode: difference;
+        }
+
+        .time::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            mix-blend-mode: difference;
+        }
+
+        .time:hover::after {
+            opacity: 1;
+            mix-blend-mode: difference;
+        }
+
+        /* 日期样式 */
+        .date {
+            font-size: 1rem;
+            opacity: 0.8;
+            font-weight: 400;
+            letter-spacing: 1px;
+            mix-blend-mode: difference;
+        }
+
+        /* 液态玻璃卡片效果 */
+        .glass-card {
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem 3rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* 快捷小组件容器 */
+        .widgets-container {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 3;
+            padding: 0 20px;
+            flex-wrap: wrap;
+        }
+
+        /* 单个小组件样式 */
+        .widget {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            color: white;
+            text-decoration: none;
+            user-select: none;
+            touch-action: none; /* 优化触摸设备上的拖拽 */
+        }
+
+        .widget:hover {
+            transform: translateY(-5px) scale(1.05);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .widget.dragging {
+            opacity: 0.8;
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .widget-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+            pointer-events: none;
+        }
+
+        .widget-name {
+            font-size: 12px;
+            text-align: center;
+            opacity: 0.9;
+            pointer-events: none;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .widgets-container {
+                gap: 15px;
+            }
+            .widget {
+                width: 70px;
+                height: 70px;
+            }
+        }
+
+        /* 设置按钮 */
+        .settings-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 4;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .settings-btn:hover {
+            transform: rotate(30deg) scale(1.1);
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- 液态玻璃背景层 -->
+    <div class="glass-layer"></div>
+    
+    <!-- 动态光影效果 -->
+    <div class="light-effect"></div>
+    
+    <!-- 时间显示 -->
+    <div class="showTime">
+        <div class="glass-card">
+            <p class="time" id="time">00:00:00</p>
+            <p class="date" id="date">2023年1月1日 周日</p>
+        </div>
+    </div>
+
+    <!-- 快捷小组件容器 -->
+    <div class="widgets-container" id="widgets-container"></div>
+
+    <!-- 设置按钮 -->
+    <div class="settings-btn" id="settings-btn">
+        <i class="fas fa-cog"></i>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+            
+            // 缓存DOM元素
+            const timeElement = document.getElementById('time');
+            const dateElement = document.getElementById('date');
+            const widgetsContainer = document.getElementById('widgets-container');
+            const settingsBtn = document.getElementById('settings-btn');
+            const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            
+            // 默认小组件配置
+            const defaultWidgets = [
+                { icon: 'fab fa-github', name: 'GitHub', url: 'https://github.com' },
+                { icon: 'fab fa-youtube', name: 'YouTube', url: 'https://youtube.com' },
+                { icon: 'fas fa-envelope', name: 'Gmail', url: 'https://mail.google.com' },
+                { icon: 'fab fa-google-drive', name: 'Drive', url: 'https://drive.google.com' },
+                { icon: 'fab fa-twitter', name: 'Twitter', url: 'https://twitter.com' },
+                { icon: 'fab fa-reddit', name: 'Reddit', url: 'https://reddit.com' },
+                { icon: 'fab fa-zhihu', name: '知乎', url: 'https://zhihu.com' },
+                { icon: 'fas fa-play', name: 'B站', url: 'https://bilibili.com' }
+            ];
+            
+            // 格式化数字，确保两位数显示
+            const padZero = num => num.toString().padStart(2, '0');
+            
+            // 更新时间显示
+            function updateTime() {
+                const now = new Date();
+                
+                // 更新时间
+                timeElement.textContent = [
+                    padZero(now.getHours()),
+                    padZero(now.getMinutes()),
+                    padZero(now.getSeconds())
+                ].join(':');
+                
+                // 更新日期
+                dateElement.textContent = [
+                    `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`,
+                    weekDays[now.getDay()]
+                ].join(' ');
+            }
+            
+            // 从GTHB服务器获取config.txt
+            async function fetchWidgetConfig() {
+                try {
+                    // 改成你的 GitHub Pages 地址
+                    const response = await fetch('https://alpharandom8546.github.io/my-new-tab/config.txt');
+                    if (!response.ok) throw new Error('加载失败');
+                    
+                    const configData = await response.text();
+                    return parseConfigData(configData);
+                } catch (error) {
+                    console.error('错误:', error);
+                    return null;
+                }
+            }
+            
+            // 解析配置数据
+            function parseConfigData(configData) {
+                const lines = configData.split('\n');
+                const widgets = [];
+                
+                lines.forEach(line => {
+                    // 跳过注释和空行
+                    if (!line.trim() || line.startsWith('#')) return;
+                    
+                    const [icon, name, url] = line.split('|');
+                    if (icon && name && url) {
+                        widgets.push({
+                            icon: icon.trim(),
+                            name: name.trim(),
+                            url: url.trim()
+                        });
+                    }
+                });
+                
+                return widgets;
+            }
+            
+            // 从本地存储加载小组件配置
+            function loadWidgetsFromLocalStorage() {
+                const savedWidgets = localStorage.getItem('widgets');
+                if (savedWidgets) {
+                    return JSON.parse(savedWidgets);
+                }
+                return null;
+            }
+            
+            // 保存小组件配置到本地存储
+            function saveWidgetsToLocalStorage(widgets) {
+                localStorage.setItem('widgets', JSON.stringify(widgets));
+            }
+            
+            // 创建小组件元素
+            function createWidgetElement(widget, index) {
+                const widgetElement = document.createElement('a');
+                widgetElement.className = 'widget';
+                widgetElement.href = widget.url;
+                widgetElement.target = '_blank';
+                widgetElement.dataset.index = index;
+                widgetElement.draggable = true;
+                widgetElement.innerHTML = `
+                    <div class="widget-icon"><i class="${widget.icon}"></i></div>
+                    <div class="widget-name">${widget.name}</div>
+                `;
+                
+                // 添加拖拽事件
+                widgetElement.addEventListener('dragstart', handleDragStart);
+                widgetElement.addEventListener('dragover', handleDragOver);
+                widgetElement.addEventListener('drop', handleDrop);
+                widgetElement.addEventListener('dragend', handleDragEnd);
+                
+                return widgetElement;
+            }
+            
+            // 渲染小组件
+            function renderWidgets(widgets) {
+                widgetsContainer.innerHTML = '';
+                widgets.forEach((widget, index) => {
+                    const widgetElement = createWidgetElement(widget, index);
+                    widgetsContainer.appendChild(widgetElement);
+                });
+            }
+            
+            // 拖拽相关变量
+            let draggedItem = null;
+            
+            // 拖拽开始
+            function handleDragStart(e) {
+                draggedItem = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', this.innerHTML);
+            }
+            
+            // 拖拽经过
+            function handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                const afterElement = getDragAfterElement(widgetsContainer, e.clientY);
+                if (afterElement == null) {
+                    widgetsContainer.appendChild(draggedItem);
+                } else {
+                    widgetsContainer.insertBefore(draggedItem, afterElement);
+                }
+            }
+            
+            // 获取拖拽后的位置
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.widget:not(.dragging)')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            
+            // 放置
+            function handleDrop(e) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 拖拽结束
+            function handleDragEnd() {
+                this.classList.remove('dragging');
+                
+                // 更新小组件顺序并保存
+                const widgets = Array.from(widgetsContainer.children).map((el, index) => {
+                    return {
+                        icon: el.querySelector('.widget-icon i').className,
+                        name: el.querySelector('.widget-name').textContent,
+                        url: el.href
+                    };
+                });
+                
+                saveWidgetsToLocalStorage(widgets);
+            }
+            
+            // 初始化拖拽功能
+            function initDragAndDrop() {
+                const widgets = widgetsContainer.querySelectorAll('.widget');
+                widgets.forEach(widget => {
+                    widget.addEventListener('dragstart', handleDragStart);
+                    widget.addEventListener('dragover', handleDragOver);
+                    widget.addEventListener('drop', handleDrop);
+                    widget.addEventListener('dragend', handleDragEnd);
+                });
+            }
+            
+            // 设置按钮功能
+            function initSettingsButton() {
+                settingsBtn.addEventListener('click', () => {
+                    alert('设置功能将在未来版本中添加\n\n当前功能：\n- 拖拽排序小组件\n- 自动保存配置到本地存储');
+                });
+            }
+            
+            // 初始化并设置定时器
+            async function init() {
+                updateTime();
+                setInterval(updateTime, 1000);
+                initSettingsButton();
+                
+                // 尝试从本地存储加载配置
+                let widgets = loadWidgetsFromLocalStorage();
+                
+                if (!widgets) {
+                    // 如果没有本地配置，尝试从服务器获取
+                    widgets = await fetchWidgetConfig();
+                    
+                    // 如果服务器配置也获取失败，使用默认配置
+                    if (!widgets) {
+                        widgets = defaultWidgets;
+                    }
+                    
+                    // 保存初始配置到本地存储
+                    saveWidgetsToLocalStorage(widgets);
+                }
+                
+                // 渲染小组件
+                renderWidgets(widgets);
+                
+                // 随机背景图片
+                const backgrounds = [
+                    'https://static1.e926.net/data/2b/c3/2bc3fe99c64c339b148df23992bdc64f.jpg',
+                    'https://static1.e926.net/data/cd/28/cd287ce1244d88b1bc17695be62276f0.jpg',
+                    'https://static1.e926.net/data/b4/84/b4847170889c59518a1d2861856ef2e5.jpg',
+                    'https://static1.e926.net/data/e7/a4/e7a4108a6ca8501b2bd03b0ba2742ae2.jpg',
+                    'https://static1.e926.net/data/8c/cc/8ccc0b3ac9b15ff17b0a8fb16492a811.jpg'
+                ];
+                document.body.style.backgroundImage = `url(${backgrounds[Math.floor(Math.random() * backgrounds.length)]})`;
+            }
+            
+            // 当DOM加载完成后初始化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+fab fa-github|Github|https://github.com/
+fab fa-bilibili|哔哩哔哩|https://www.bilibili.com/
+fab fa-figma|Figma|https://figma.com/
+fab fa-qq|QQ邮箱|https://mail.qq.com/
